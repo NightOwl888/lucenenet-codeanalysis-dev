@@ -146,7 +146,7 @@ The release process is mostly automated. However, a manual review is required on
 
 Tagging the commit and pushing it to the GitHub repository will start the automated draft release. The progress of the release can be viewed in the [GitHub Actions UI](https://github.com/apache/lucenenet-codeanalysis-dev/actions). Select the run corresponding to the version tag that is pushed upstream to view the progress.
 
-### Tagging the Commit
+### Checking the Version
 
 If you don't already know the version that corresponds to the HEAD commit, check it now.
 
@@ -163,6 +163,67 @@ AssemblyInformationalVersion: 2.0.0-beta.5+a54c015802
 NuGetPackageVersion:          2.0.0-beta.5
 NpmPackageVersion:            2.0.0-beta.5
 ```
+
+Take note of the `NuGetPackageVersion`, as it will need to be used later.
+
+### Updating the AnalyzerReleases Files
+
+Roslyn analyzers use two release tracking files to manage analyzer rule metadata:
+
+- **`AnalyzerReleases.Unshipped.md`**
+  Tracks analyzer rules that have been added or modified since the last release but are not yet published in a shipped package.  
+
+- **`AnalyzerReleases.Shipped.md`**
+  Tracks analyzer rules that have been released in one or more shipped packages. This is the authoritative record of rules shipped at specific versions.
+
+Before tagging the release, you must ensure that these files are up to date. This guarantees that the release metadata reflects the rules included in the NuGet package.
+
+#### Standard Workflow
+
+1. **Locate pending unshipped rules**  
+   Open `AnalyzerReleases.Unshipped.md`. This contains all rules added or modified since the last release.
+
+2. **Move unshipped rules into `AnalyzerReleases.Shipped.md`**  
+   - Create a new section in `AnalyzerReleases.Shipped.md` with the heading for the `NuGetPackageVersion` you are about to release.
+   - Copy the rules listed under `Unshipped.md` into this section.  
+   - Keep the table formatting consistent with previous releases.
+
+3. **Clear `AnalyzerReleases.Unshipped.md`**  
+   After the rules are copied over, `AnalyzerReleases.Unshipped.md` should either be empty or contain only rules that are not part of this release.
+
+4. **Commit the changes**  
+   Commit the modifications before tagging the release.
+
+### Example: First and Second Releases
+
+`AnalyzerReleases.Shipped.md` evolves by appending each release as a new section. Each release is marked with a `## Release <version>` header.
+
+```markdown
+## Release 1.0.0-alpha.1
+
+### New Rules
+
+ Rule ID       | Category | Severity | Notes
+---------------|----------|----------|-----------------------------------------
+ LuceneDev1000 | Design   | Warning  | Floating point types should not be compared for exact equality
+ LuceneDev1001 | Design   | Warning  | Floating point types should be formatted with J2N methods
+
+## Release 1.0.0-alpha.2
+
+### New Rules
+
+ Rule ID       | Category | Severity | Notes
+---------------|----------|----------|-----------------------------------------
+ LuceneDev1002 | Design   | Warning  | Floating point type arithmetic needs to be checked
+
+### Removed Rules
+
+ Rule ID       | Notes
+---------------|-------------------------------------------------
+ LuceneDev1001 | Replaced with LuceneDev2001 (better precision)
+```
+
+### Tagging the Commit
 
 Tag the commit with `v` followed by the NuGetPackageVersion.
 
