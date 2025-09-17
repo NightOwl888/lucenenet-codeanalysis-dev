@@ -16,8 +16,24 @@ fi
 
 # Bail if the token doesn't exist in the file
 if ! grep -q "## Release $token" "$file"; then
-    echo "Token '## Release $token' not found in '$file', skipping NBGV replacement."
     exit 0
+fi
+
+# Check if nbgv tool is installed
+if ! command -v nbgv >/dev/null 2>&1; then
+    cat <<EOF
+ERROR: The AnalyzerReleases.Shipped.md $token token replacement failed.
+The 'nbgv' tool is required but not installed.
+
+To recover manually:
+
+1. Install the nbgv tool (see the docs/make-release.md documentation)
+2. Run: nbgv get-version -v NuGetPackageVersion
+3. In $file, replace the $token token with the version returned from step 2
+4. Run: git add $file && git commit --amend --no-edit
+5. Run: nbgv get-version -v NuGetPackageVersion again to ensure the version is the same as step 2 before proceeding
+EOF
+    exit 1
 fi
 
 # Set flag to prevent recursion
