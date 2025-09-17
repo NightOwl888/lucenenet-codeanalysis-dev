@@ -1,0 +1,38 @@
+#!/bin/sh
+# eng/git-hooks/post-commit
+# Replaces {{vnext}} in "## Release {{vnext}}" with the NuGetPackageVersion
+# only if the file contains the token. Safe from infinite loops.
+
+file="src/Lucene.Net.CodeAnalysis.Dev/AnalyzerReleases.Shipped.md"
+token="{{vnext}}"
+
+# Bail if already running to prevent infinite loop
+if [ -n "$POST_COMMIT_RUNNING" ]; then
+    exit 0
+fi
+
+# Bail if the file doesn't exist
+[ ! -f "$file" ] && exit 0
+
+# Bail if the token doesn't exist in the file
+if ! grep -q "## Release $token" "$file"; then
+    echo "Token '## Release $token' not found in '$file', skipping NBGV replacement."
+    exit 0
+fi
+
+# Set flag to prevent recursion
+export POST_COMMIT_RUNNING=1
+
+# Get the NuGet version
+version=$(nbgv get-version -v NuGetPackageVersion)
+echo "Replacing '$token' with $version in '$file'"
+
+# Replace {{vnext}} only in lines starting with "## Release "
+sed -i.bak "/^## Release /s/$token/$version/g" "$file" && rm "$file.bak"
+
+# Re-stage the file and amend the commit (this triggers post-commit again, but recursion is prevented)
+git add "$file"
+git commit --amend --no-edit
+
+# Unset the flag (optional, since the script ends)
+unset POST_COMMIT_RUNNING
